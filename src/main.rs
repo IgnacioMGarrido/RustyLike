@@ -1,3 +1,6 @@
+use chargrid::{Coord, Size, input::ScrollDirection};
+use rgb24::Rgb24;
+
 
 fn main(){
     use chargrid_graphical::{Config, Context, Dimensions, FontBytes};
@@ -26,15 +29,57 @@ fn main(){
         resizable: false 
     });
     
-    let app = App::new();
+    let screen_size = Size::new(40, 30);
+    let app = App::new(screen_size);
     context.run_app(app);
 }
 
-struct App {}
+struct App {
+    data: AppData,
+    view: AppView,
+}
 
 impl App {
+    fn new(screen_size: Size) -> Self {
+        Self {
+            data: AppData::new(screen_size),
+            view: AppView::new(),
+        }
+    }
+}
+
+struct AppData{
+    player_coord: Coord,
+}
+
+impl AppData{
+    fn new(screen_size: Size) -> Self{
+        Self{
+            player_coord: screen_size.to_coord().unwrap() / 2,
+        }
+    }
+}
+
+struct AppView {}
+
+impl AppView {
     fn new() -> Self {
         Self {}
+    }
+}
+
+impl<'a> chargrid::render::View<&'a AppData> for AppView{
+    fn view<F: chargrid::app::Frame, C: chargrid::app::ColModify>(
+        &mut self,
+        data: &'a AppData,
+        context: chargrid::app::ViewContext<C>,
+        frame: &mut F
+    ){
+        let view_cell = chargrid::render::ViewCell::new()
+        .with_character('@')
+        .with_foreground(Rgb24::new_grey(255));
+
+        frame.set_cell_relative(data.player_coord, 0, view_cell, context);
     }
 }
 
@@ -53,13 +98,15 @@ impl chargrid::app::App for App{
     fn on_frame<F, C>(
         &mut self,
         _since_last_frame: chargrid::app::Duration,
-        _view_context: chargrid::app::ViewContext<C>,
-        _frame: &mut F,
+        view_context: chargrid::app::ViewContext<C>,
+        frame: &mut F,
     ) -> Option<chargrid::app::ControlFlow>
     where
         F: chargrid::app::Frame,
         C: chargrid::app::ColModify,
     {
+        use chargrid::render::View;
+        self.view.view(&self.data, view_context, frame);
         None
     }
 }
