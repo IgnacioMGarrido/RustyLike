@@ -1,7 +1,10 @@
+use crate::terrain::{self, TerrainTile};
 use coord_2d::{Coord, Size};
 use direction::CardinalDirection;
-use components::Components;
 use entity_table::{EntityAllocator};
+use components::Components;
+use rand::{Rng, SeedableRng};
+use rand_isaac::Isaac64Rng;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Tile {
@@ -9,19 +12,6 @@ pub enum Tile {
     Floor,
     Wall,
 }
-
-spatial_table::declare_layers_module! {
-    layers {
-        floor: Floor,
-        character: Character,
-        feature: Feature,
-    }
-}
-
-
-pub use layers::Layer;
-type SpatialTable = spatial_table::SpatialTable<layers::Layers>;
-pub type Location = spatial_table::Location<Layer>;
 
 entity_table::declare_entity_module!{
     components{
@@ -32,6 +22,18 @@ pub struct EntityToRender{
     pub tile: Tile,
     pub location: Location,
 }
+
+spatial_table::declare_layers_module! {
+    layers {
+        floor: Floor,
+        character: Character,
+        feature: Feature,
+    }
+}
+
+pub use layers::Layer;
+type SpatialTable = spatial_table::SpatialTable<layers::Layers>;
+pub type Location = spatial_table::Location<Layer>;
 
 pub struct GameState{
     screen_size: Size,
@@ -55,7 +57,8 @@ impl GameState{
             player_entity,
         };
 
-        game_state.populate(screen_size.to_coord().unwrap() / 2);
+        let mut rng = Isaac64Rng::from_entropy();
+        game_state.populate(&mut rng);
         game_state
     }
 
@@ -85,14 +88,21 @@ impl GameState{
         })
     }
 
-    fn populate(&mut self, player_coord: Coord){
-        self.spawn_player(player_coord);
-        for coord in self.screen_size.coord_iter_row_major() {
-            self.spawn_floor(coord);
+    fn populate<R: Rng>(&mut self, rng: &mut R){
+        let terrain = terrain::generate_dungeon(self.screen_size, rng);
+        for(coord, &terrain_tile) in terrain.enumerate() {
+            match terrain_tile {
+                TerrainTile::Player => {
+                    self.spawn_player(coord);
+                    self.spawn_floor(coord);
+                }
+                TerrainTile::Floor => self.spawn_floor(coord),
+                TerrainTile::Wall => {
+                    self.spawn_wall(coord);
+                    self.spawn_floor(coord);
+                }
+            }
         }
-        self.spawn_wall(player_coord + Coord::new(-1, 2));
-        self.spawn_wall(player_coord + Coord::new(0, 2));
-        self.spawn_wall(player_coord + Coord::new(1, 2));
     }
 
     fn spawn_player(&mut self, coord: Coord){
