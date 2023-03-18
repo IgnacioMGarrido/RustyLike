@@ -58,10 +58,26 @@ impl Room {
     }
 }
 
+fn carve_corridor(start: Coord, end: Coord, grid: &mut Grid<Option<TerrainTile>>) {
+    for i in start.x.min(end.x)..= start.x.max(end.x) {
+        let cell = grid.get_checked_mut(Coord { x: i, ..start });
+        if *cell == None || *cell == Some(TerrainTile::Wall) {
+            *cell = Some(TerrainTile::Floor);
+        }
+    }
+
+    for i in start.y.min(end.y)..= start.y.max(end.y) {
+        let cell = grid.get_checked_mut(Coord { y: i, ..end });
+        if *cell == None || *cell == Some(TerrainTile::Wall) {
+            *cell = Some(TerrainTile::Floor);
+        }
+    }
+}
+
 pub fn generate_dungeon<R: Rng>(size: Size, rng: &mut R) -> Grid<TerrainTile> {
     let mut grid = Grid::new_copy(size, None);
-    let mut player_placed = false;
-    
+    let mut room_centers = Vec::new();
+
     const NUM_ATTEMPTS: usize = 100;
     for _ in 0..NUM_ATTEMPTS {
         let room = Room::choose(size, rng);
@@ -70,12 +86,17 @@ pub fn generate_dungeon<R: Rng>(size: Size, rng: &mut R) -> Grid<TerrainTile> {
             room.carve_out(&mut grid);
 
             let room_center = room.center();
-
-            if !player_placed {
+            
+            if room_centers.is_empty() {
                 *grid.get_checked_mut(room_center) = Some(TerrainTile::Player);
-                player_placed = true;
             }
+
+            room_centers.push(room_center);
         }
+    }
+
+    for window in room_centers.windows(2) {
+        carve_corridor(window[0], window[1], &mut grid);
     }
 
     grid.map(|t| t.unwrap_or(TerrainTile::Wall))
