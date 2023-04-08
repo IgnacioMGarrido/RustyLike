@@ -124,4 +124,16 @@ impl World {
             },).unwrap();
         self.components.tile.insert(entity, Tile::Floor);
     }
+
+    pub fn size(&self) -> Size {
+        self.spatial_table.grid_size()
+    }
+
+    pub fn opacity_at(&self, coord: Coord) -> u8{
+        if self.spatial_table.layers_at_checked(coord).feature.is_some() {
+            255
+        } else {
+            0
+        }
+    }
 }

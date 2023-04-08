@@ -18,3 +18,4 @@ entity_table = "0.2"
 spatial_table = "0.3"
 rand = "0.8"        # basic functionality for random number generators
 rand_isaac = "0.3"  # a specific random number generator implementation
+shadowcast = "0.8"
