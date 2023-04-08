@@ -2,18 +2,36 @@ use crate::terrain::{self, TerrainTile};
 use coord_2d::{Coord, Size}; 
 use direction::CardinalDirection; 
 use entity_table::{Entity, EntityAllocator}; 
+
 use rand::Rng;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NpcType{
+    Orc,
+    Troll
+}
+
+impl NpcType{
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Orc => "orc",
+            Self::Troll => "troll",
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub enum Tile {
     Player,
     Floor,
     Wall,
+    Npc(NpcType)
 }
 
 entity_table::declare_entity_module! {
     components {
         tile: Tile,
+        npc_type: NpcType,
     }
 }
 
@@ -80,6 +98,11 @@ impl World {
                     self.spawn_wall(coord);
                     self.spawn_floor(coord);
                 }
+                TerrainTile::Npc(npc_type) => {
+                    let entity = self.spawn_npc(coord, npc_type);
+                    self.spawn_floor(coord);
+                    //ai_state.insert(entity, ());
+                }
             }
         }
         Populate {
@@ -100,6 +123,18 @@ impl World {
         self.components
             .tile
             .insert(entity, Tile::Player);
+        entity
+    }
+
+    fn spawn_npc(&mut self, coord: Coord, npc_type: NpcType) -> Entity {
+        let entity = self.entity_allocator.alloc();
+        self.spatial_table.update(entity, Location{
+            coord,
+            layer: Some(Layer::Character)
+        },).unwrap();
+        self.components.tile.insert(entity, Tile::Npc(npc_type));
+        self.components.npc_type.insert(entity, npc_type);
+
         entity
     }
 

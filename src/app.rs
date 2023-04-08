@@ -1,5 +1,5 @@
 use crate::game::{GameState};
-use crate::world::{Layer, Tile};
+use crate::world::{Layer, Tile, NpcType};
 use crate::visibility::CellVisibility;
 use chargrid::{
     app::{App as ChargridApp, ControlFlow},
@@ -58,6 +58,14 @@ fn currently_visible_view_cell_of_tile(tile: Tile) -> chargrid::render::ViewCell
             .with_character('#')
             .with_foreground(Rgb24::new(0, 63, 63))
             .with_background(Rgb24::new(63, 127, 127)),
+        Tile::Npc(NpcType::Orc) => chargrid::render::ViewCell::new()
+            .with_character('o')
+            .with_bold(true)
+            .with_foreground(Rgb24::new(0, 187, 0)),
+        Tile::Npc(NpcType::Troll) => chargrid::render::ViewCell::new()
+            .with_character('T')
+            .with_bold(true)
+            .with_foreground(Rgb24::new(187, 0, 0)),
     }
 }
 
@@ -74,6 +82,14 @@ fn previously_visible_view_cell_of_tile(tile: Tile) -> chargrid::render::ViewCel
             .with_character('#')
             .with_foreground(Rgb24::new_grey(63))
             .with_background(Rgb24::new_grey(0)),
+        Tile::Npc(NpcType::Orc) => chargrid::render::ViewCell::new()
+            .with_character('o')
+            .with_bold(true)
+            .with_foreground(Rgb24::new_grey(63)),
+        Tile::Npc(NpcType::Troll) => chargrid::render::ViewCell::new()
+            .with_character('T')
+            .with_bold(true)
+            .with_foreground(Rgb24::new_grey(63))
     }
 }
 

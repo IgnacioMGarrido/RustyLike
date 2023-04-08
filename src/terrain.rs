@@ -1,11 +1,14 @@
 use grid_2d::{Coord, Grid, Size};
 use rand::Rng;
+use crate::world::NpcType;
+use rand::{seq::IteratorRandom, seq::SliceRandom};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TerrainTile {
     Player,
     Floor,
     Wall,
+    Npc(NpcType),
 }
 
 struct Room {
@@ -24,6 +27,22 @@ impl Room {
         let top = rng.gen_range(0..top_left_bounds.height());
         let top_left = Coord::new(left as i32, top as i32);
         Self{ top_left, size }
+    }
+
+    // Place `n` randomly chosen NPCs at random positions within the room
+    fn place_npcs<R: Rng>(&self, n: usize, grid: &mut Grid<Option<TerrainTile>>, rng: &mut R) {
+        for coord in self
+            .coords()
+            .filter(|&coord| grid.get_checked(coord).unwrap() == TerrainTile::Floor)
+            .choose_multiple(rng, n)
+        {
+            let npc_type = if rng.gen_range(0..100) < 80 {
+                NpcType::Orc
+            } else {
+                NpcType::Troll
+            };
+            *grid.get_checked_mut(coord) = Some(TerrainTile::Npc(npc_type));
+        }
     }
 
     // Returns coord at the center aof the room.
@@ -78,6 +97,8 @@ pub fn generate_dungeon<R: Rng>(size: Size, rng: &mut R) -> Grid<TerrainTile> {
     let mut grid = Grid::new_copy(size, None);
     let mut room_centers = Vec::new();
 
+    const NPCS_PER_ROOM_DISTRIBUTION: &[usize] = &[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
+
     const NUM_ATTEMPTS: usize = 100;
     for _ in 0..NUM_ATTEMPTS {
         let room = Room::choose(size, rng);
@@ -92,6 +113,9 @@ pub fn generate_dungeon<R: Rng>(size: Size, rng: &mut R) -> Grid<TerrainTile> {
             }
 
             room_centers.push(room_center);
+
+            let &num_npcs = NPCS_PER_ROOM_DISTRIBUTION.choose(rng).unwrap();
+            room.place_npcs(num_npcs, &mut grid, rng);
         }
     }
 
